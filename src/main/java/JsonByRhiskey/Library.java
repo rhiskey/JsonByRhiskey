@@ -19,10 +19,10 @@ import com.google.gson.GsonBuilder;
 import JsonByRhiskey.Classes.JsonMessage;
 import JsonByRhiskey.Classes.JsonMessageExtended;
 import JsonByRhiskey.Classes.Submessage;
-import JsonByRhiskey.Interfaces.ExtendedMsg;
-import JsonByRhiskey.Interfaces.IMsg;
-import JsonByRhiskey.Interfaces.IMsgAdapter;
-import JsonByRhiskey.Interfaces.SimpleMsg;
+//import JsonByRhiskey.Interfaces.ExtendedMsg;
+//import JsonByRhiskey.Interfaces.IMsg;
+//import JsonByRhiskey.Interfaces.IMsgAdapter;
+//import JsonByRhiskey.Interfaces.SimpleMsg;
 
 public class Library {
 	
