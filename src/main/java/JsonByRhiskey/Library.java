@@ -3,11 +3,22 @@
  */
 package JsonByRhiskey;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,90 +36,94 @@ import JsonByRhiskey.Classes.Submessage;
 //import JsonByRhiskey.Interfaces.SimpleMsg;
 
 public class Library {
-	
+
 	@Retention(RetentionPolicy.RUNTIME)
-	@Target({ElementType.FIELD})
+	@Target({ ElementType.FIELD })
 	public @interface IMsg {
-	  // Field tag only annotation
+		// Field tag only annotation
 	}
 
 	public class SampleObjectForTest {
-		@IMsg private final int annotatedField;
+		@IMsg
+		private final int annotatedField;
 		private final String stringField;
 		private final long longField;
 		private final Class<?> clazzField;
 
-	public SampleObjectForTest() {
-	    this.clazzField = null;
-		annotatedField = 5;
-	    stringField = "someDefaultValue";
-	    longField = 1234;
-	  }
+		public SampleObjectForTest() {
+			this.clazzField = null;
+			annotatedField = 5;
+			stringField = "someDefaultValue";
+			longField = 1234;
+		}
 	}
-	
+
 	public abstract class FieldExclusionStrategy implements ExclusionStrategy {
-		  private final Class<?> typeToSkip;
+		private final Class<?> typeToSkip;
 
-		  private FieldExclusionStrategy(Class<?> typeToSkip) {
-		    this.typeToSkip = typeToSkip;
-		  }
-
-		  public boolean shouldSkipClass(Class<?> clazz) {
-		    return (clazz == typeToSkip);
-		  }
-
-		  public boolean shouldSkipField(FieldAttributes f) {
-		    return f.getAnnotation(IMsg.class) != null;
-		  }
+		private FieldExclusionStrategy(Class<?> typeToSkip) {
+			this.typeToSkip = typeToSkip;
 		}
 
-	
-    public static void main(String[] args) {
-    	List<JsonMessage> msgs = new ArrayList<>();
-    	
-    	// Serialize
-    	Gson gson = new Gson();
-    	JsonMessage msg = new JsonMessage("service", "Server is restarting");
-    	String jsonString = gson.toJson(msg);
-    	JsonMessage jsonObject = gson.fromJson(jsonString, JsonMessage.class);
-    	System.out.println(jsonObject.toString());
-    	  	
-    	JsonMessage msg2 = new JsonMessage("admin", "Warning!");
-    	Submessage msg3 = new Submessage("admin", "Warning!", "Player1 opened chest");
-    	JsonMessage msg4 = new JsonMessage("system", "INFO!","127.0.0.1", 11);
-    	JsonMessage msg5 = new JsonMessage("console", "[DATE-TIME] Log");
-    	JsonMessage msg6 = new JsonMessage("message", "Privet, player &bEa!");
-    	
-    	msgs.add(msg);
-    	msgs.add(msg2);    	
-    	msgs.add(msg3);
-     	msgs.add(msg4);
-     	msgs.add(msg5);
-     	msgs.add(msg6);
-    	JsonMessages serializedMessages = new JsonMessages();
-    	serializedMessages.setJsonMsgList(msgs);   	
-    	String jsonDataString = gson.toJson(serializedMessages);
-  	  	
-    	// Deserialize (reqest), maybe file
-    	String jsonString_input = "{'type':'service', 'payload':'Server is restarting', 'ip':'192.168.1.1', 'port':'25565'}";        
-    	Gson gson2 = new GsonBuilder()
-    				.excludeFieldsWithModifiers(Modifier.STATIC)
-    				.serializeNulls()
-  		      		.create(); 	 
-    	JsonMessageExtended deserializedJson = gson2.fromJson(jsonString_input, JsonMessageExtended.class);  	 
-    	System.out.println(deserializedJson.getType()+"\n" +deserializedJson.getPayload() + "\n"+ deserializedJson.getPort()+ "\n" +deserializedJson.getIp());
+		public boolean shouldSkipClass(Class<?> clazz) {
+			return (clazz == typeToSkip);
+		}
 
-    	
-    	
+		public boolean shouldSkipField(FieldAttributes f) {
+			return f.getAnnotation(IMsg.class) != null;
+		}
+	}
+
+	public static void main(String[] args) {
+		List<JsonMessage> msgs = new ArrayList<>();
+
+		// Serialize 1 message
+		Gson gson = new Gson();
+		JsonMessage msg = new JsonMessage("service", "Server is restarting");
+		String jsonString = gson.toJson(msg);
+		JsonMessage jsonObject = gson.fromJson(jsonString, JsonMessage.class);
+		System.out.println(jsonObject.toString());
+
+		//// Array of messages	
+//		JsonMessage msg2 = new JsonMessage("admin", "Warning!");
+//		Submessage msg3 = new Submessage("admin", "Warning!", "Player1 opened chest");
+//		JsonMessage msg4 = new JsonMessage("system", "INFO!", "127.0.0.1", 11);
+//		JsonMessage msg5 = new JsonMessage("console", "[DATE-TIME] Log");
+//		JsonMessage msg6 = new JsonMessage("message", "Privet, player &bEa!");
+
+//		msgs.add(msg);
+//		msgs.add(msg2);
+//		msgs.add(msg3);
+//		msgs.add(msg4);
+//		msgs.add(msg5);
+//		msgs.add(msg6);
+		
+//		JsonMessages serializedMessages = new JsonMessages();
+//		serializedMessages.setJsonMsgList(msgs);
+//		String jsonDataString = gson.toJson(serializedMessages);
+		
+		String jsonDataString = gson.toJson(jsonObject);
+		// Save 1 message
+		WriteToFile(jsonDataString, "messages.json");
+
+		// Deserialize (reqest), maybe file
+		//String jsonString_input = "{'type':'service', 'payload':'Server is restarting', 'ip':'192.168.1.1', 'port':'25565'}";
+		String jsonStringFromFile = ReadFromJson("messages.json");
+		
+		Gson gson2 = new GsonBuilder().excludeFieldsWithModifiers(Modifier.STATIC).serializeNulls().create();
+		JsonMessageExtended deserializedJson = gson2.fromJson(jsonStringFromFile, JsonMessageExtended.class);
+		System.out.println(deserializedJson.getType() + "\n" + deserializedJson.getPayload() + "\n"
+				+ deserializedJson.getPort() + "\n" + deserializedJson.getIp());
+
 //    	// TODO CUSTOM Deserialize to class
-    	    	
-    	// Пришло на вход из TCP несколько разных сообщений, эмулируем
+
+		// Пришло на вход из TCP несколько разных сообщений, эмулируем
 //    	List<IMsg> msgs = new ArrayList<>();
 //    	msgs.add(new SimpleMsg("message", "Hello players!"));
 //    	msgs.add( new ExtendedMsg("service", null, "192.168.0.1", 25565));
 //    	msgs.add(new SimpleMsg("admin", "Server restarting..."));
 //    	msgs.add( new SimpleMsg("console", "[INFO] Auto refreshing map"));
- 	
+
 //        IMsg msgs2[] = new IMsg[]{new SimpleMsg("message", "Hello players!"), new ExtendedMsg("service", null, "192.168.0.1", 25565)};
 //        Gson gsonExt = null;
 //        {
@@ -126,20 +141,86 @@ public class Library {
 //            IMsg message2 = gsonExt.fromJson(messageJson, IMsg.class);
 //            System.out.println(message2.payload());
 //        }
-    	
-    	
-}
-    
+
+	}
+
+	public static void WriteToFile(String data, String file) {
+		if (file == null || file == "")
+			file = "messages.json";
+
+		// Create File if not exists
+		File jsonFile = new File(file);
+		try {
+			jsonFile.createNewFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} // if file already exists will do nothing
+//    	try {
+//			FileOutputStream oFile = new FileOutputStream(jsonFile, false);
+//		} catch (FileNotFoundException e) {
+//			e.printStackTrace();
+//		} 
+
+		// Write JSON file
+		try (FileWriter fw = new FileWriter(file)) {
+			fw.write(data);
+			fw.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static String ReadFromJson(String file) {
+		
+		RandomAccessFile reader = null;
+		try {
+			reader = new RandomAccessFile(file, "r");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		FileChannel channel = reader.getChannel();
+
+		int bufferSize = 1024;
+		try {
+			if (bufferSize > channel.size()) {
+				bufferSize = (int) channel.size();
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ByteBuffer buff = ByteBuffer.allocate(bufferSize);
+		try {
+			channel.read(buff);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		buff.flip();
+
+		String readed = new String(buff.array());
+		try {
+			channel.close();
+			reader.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return readed;
+	}
+
 	public static class JsonMessages {
-    private List<JsonMessage> jsonMsgList;
+		private List<JsonMessage> jsonMsgList;
 
-	public List<JsonMessage> getJsonMsgList() {
-		return jsonMsgList;
-	}
+		public List<JsonMessage> getJsonMsgList() {
+			return jsonMsgList;
+		}
 
-	public void setJsonMsgList(List<JsonMessage> jsonMsgList) {
-		this.jsonMsgList = jsonMsgList;
+		public void setJsonMsgList(List<JsonMessage> jsonMsgList) {
+			this.jsonMsgList = jsonMsgList;
+		}
+
 	}
-    
-}
 }
